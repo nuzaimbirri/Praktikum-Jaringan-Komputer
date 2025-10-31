@@ -1,0 +1,470 @@
+! Basic Switch Configuration Template
+! Cisco Catalyst Switch
+
+! ========================================
+! INITIAL SETUP
+! ========================================
+
+enable
+configure terminal
+
+! Set hostname
+hostname Switch-Core
+
+! Enable password encryption
+service password-encryption
+
+! Set enable secret password
+enable secret cisco123
+
+! Configure console password
+line console 0
+ password console123
+ login
+ logging synchronous
+ exec-timeout 5 0
+ exit
+
+! Configure vty (telnet/ssh) access
+line vty 0 15
+ password vty123
+ login
+ transport input ssh
+ exec-timeout 5 0
+ exit
+
+! ========================================
+! VLAN CONFIGURATION
+! ========================================
+
+! Create VLANs
+vlan 10
+ name Sales
+ exit
+
+vlan 20
+ name IT
+ exit
+
+vlan 30
+ name HR
+ exit
+
+vlan 99
+ name Management
+ exit
+
+vlan 100
+ name Voice
+ exit
+
+! ========================================
+! MANAGEMENT VLAN
+! ========================================
+
+! Configure management interface
+interface vlan 99
+ description Management VLAN
+ ip address 192.168.99.10 255.255.255.0
+ no shutdown
+ exit
+
+! Set default gateway
+ip default-gateway 192.168.99.1
+
+! ========================================
+! ACCESS PORT CONFIGURATION
+! ========================================
+
+! Configure access ports for VLAN 10 (Sales)
+interface range FastEthernet 0/1-8
+ description Sales Department
+ switchport mode access
+ switchport access vlan 10
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ no shutdown
+ exit
+
+! Configure access ports for VLAN 20 (IT)
+interface range FastEthernet 0/9-16
+ description IT Department
+ switchport mode access
+ switchport access vlan 20
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ no shutdown
+ exit
+
+! Configure access ports for VLAN 30 (HR)
+interface range FastEthernet 0/17-24
+ description HR Department
+ switchport mode access
+ switchport access vlan 30
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ no shutdown
+ exit
+
+! ========================================
+! VOICE VLAN CONFIGURATION
+! ========================================
+
+! Configure ports with voice VLAN
+interface range GigabitEthernet 0/1-4
+ description PC and IP Phone
+ switchport mode access
+ switchport access vlan 10
+ switchport voice vlan 100
+ spanning-tree portfast
+ no shutdown
+ exit
+
+! ========================================
+! TRUNK PORT CONFIGURATION
+! ========================================
+
+! Configure trunk to router
+interface GigabitEthernet 0/5
+ description Trunk to Router
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,30,99,100
+ no shutdown
+ exit
+
+! Configure trunk to another switch
+interface GigabitEthernet 0/6
+ description Trunk to Switch-Access
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,30,99,100
+ no shutdown
+ exit
+
+! ========================================
+! SPANNING TREE CONFIGURATION
+! ========================================
+
+! Set spanning tree mode
+spanning-tree mode rapid-pvst
+
+! Configure root bridge priority (lower is better)
+! Primary root bridge
+spanning-tree vlan 10,20,30,99,100 priority 4096
+
+! Configure port priority (optional)
+interface GigabitEthernet 0/5
+ spanning-tree vlan 10,20,30 port-priority 64
+ exit
+
+! ========================================
+! ETHERCHANNEL (Port Channel)
+! ========================================
+
+! Configure port channel to another switch
+interface range GigabitEthernet 0/7-8
+ description Port-Channel to Distribution Switch
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,30,99,100
+ channel-group 1 mode active
+ no shutdown
+ exit
+
+! Configure port-channel interface
+interface port-channel 1
+ description EtherChannel to Distribution Switch
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,30,99,100
+ exit
+
+! ========================================
+! DHCP SNOOPING
+! ========================================
+
+! Enable DHCP snooping
+ip dhcp snooping
+ip dhcp snooping vlan 10,20,30
+
+! Trust uplink ports
+interface GigabitEthernet 0/5
+ ip dhcp snooping trust
+ exit
+
+interface GigabitEthernet 0/6
+ ip dhcp snooping trust
+ exit
+
+! Rate limit on untrusted ports
+interface range FastEthernet 0/1-24
+ ip dhcp snooping limit rate 10
+ exit
+
+! ========================================
+! DYNAMIC ARP INSPECTION (DAI)
+! ========================================
+
+! Enable DAI
+ip arp inspection vlan 10,20,30
+
+! Trust uplink ports
+interface GigabitEthernet 0/5
+ ip arp inspection trust
+ exit
+
+interface GigabitEthernet 0/6
+ ip arp inspection trust
+ exit
+
+! ========================================
+! IP SOURCE GUARD
+! ========================================
+
+! Enable IP source guard on access ports
+interface range FastEthernet 0/1-24
+ ip verify source
+ exit
+
+! ========================================
+! STORM CONTROL
+! ========================================
+
+! Configure storm control for broadcast
+interface range FastEthernet 0/1-24
+ storm-control broadcast level 50.00 40.00
+ storm-control multicast level 50.00 40.00
+ storm-control unicast level 50.00 40.00
+ storm-control action shutdown
+ exit
+
+! ========================================
+! SSH CONFIGURATION
+! ========================================
+
+! Generate RSA key for SSH
+crypto key generate rsa general-keys modulus 2048
+
+! Enable SSH version 2
+ip ssh version 2
+ip ssh time-out 60
+ip ssh authentication-retries 3
+
+! Configure domain name (required for SSH)
+ip domain-name example.com
+
+! Create local username
+username admin privilege 15 secret admin123
+
+! Configure vty for SSH only with local authentication
+line vty 0 15
+ login local
+ transport input ssh
+ exit
+
+! ========================================
+! LOGGING AND MONITORING
+! ========================================
+
+! Enable logging
+logging buffered 51200 debugging
+logging console warnings
+
+! Configure syslog server (optional)
+! logging host 192.168.99.100
+
+! Enable timestamps
+service timestamps debug datetime msec
+service timestamps log datetime msec
+
+! ========================================
+! NTP CONFIGURATION
+! ========================================
+
+! Configure NTP server
+ntp server 192.168.99.1
+
+! Set timezone
+clock timezone WIB 7
+
+! ========================================
+! SNMP CONFIGURATION (Optional)
+! ========================================
+
+! SNMP community strings
+snmp-server community public RO
+snmp-server community private RW
+
+! SNMP location and contact
+snmp-server location "Network Room - Floor 2"
+snmp-server contact "netadmin@example.com"
+
+! ========================================
+! QoS CONFIGURATION (Optional)
+! ========================================
+
+! Enable QoS globally
+mls qos
+
+! Trust DSCP on trunk ports
+interface GigabitEthernet 0/5
+ mls qos trust dscp
+ exit
+
+! Trust CoS on access ports with voice
+interface range GigabitEthernet 0/1-4
+ mls qos trust cos
+ exit
+
+! ========================================
+! LLDP CONFIGURATION
+! ========================================
+
+! Enable LLDP globally
+lldp run
+
+! Disable CDP if not needed
+! no cdp run
+
+! ========================================
+! BANNER
+! ========================================
+
+banner motd ^
+**********************************************
+*                                            *
+*     AUTHORIZED ACCESS ONLY                 *
+*     Unauthorized access prohibited         *
+*     All activities are monitored           *
+*                                            *
+**********************************************
+^
+
+! ========================================
+! DISABLE UNUSED INTERFACES
+! ========================================
+
+! Shutdown unused interfaces
+interface range FastEthernet 0/25-48
+ description Unused Ports
+ shutdown
+ switchport mode access
+ switchport access vlan 999
+ exit
+
+! Create black hole VLAN for unused ports
+vlan 999
+ name Unused
+ exit
+
+! ========================================
+! SAVE CONFIGURATION
+! ========================================
+
+end
+
+! Save running configuration to startup configuration
+write memory
+! or
+copy running-config startup-config
+
+! ========================================
+! VERIFICATION COMMANDS
+! ========================================
+
+! show running-config
+! show startup-config
+! show vlan brief
+! show interfaces status
+! show interfaces trunk
+! show mac address-table
+! show spanning-tree
+! show etherchannel summary
+! show ip dhcp snooping
+! show ip dhcp snooping binding
+! show ip arp inspection
+! show port-security
+! show port-security address
+! show storm-control
+
+! ========================================
+! TROUBLESHOOTING COMMANDS
+! ========================================
+
+! Clear MAC address table
+! clear mac address-table dynamic
+
+! Clear port-security violations
+! clear port-security all
+
+! Reset interface from err-disabled
+! shutdown / no shutdown on the interface
+
+! Debug commands
+! debug spanning-tree events
+! debug port-security
+! debug etherchannel
+
+! ========================================
+! BACKUP CONFIGURATION
+! ========================================
+
+! Backup to TFTP server
+! copy running-config tftp://192.168.99.100/switch-backup.cfg
+
+! Restore from TFTP server
+! copy tftp://192.168.99.100/switch-backup.cfg running-config
+
+! ========================================
+! BEST PRACTICES
+! ========================================
+
+! 1. Always use VLANs for network segmentation
+! 2. Implement port security on access ports
+! 3. Enable BPDU guard on access ports
+! 4. Use portfast on access ports only
+! 5. Disable unused interfaces
+! 6. Use separate management VLAN
+! 7. Change native VLAN from default (VLAN 1)
+! 8. Enable DHCP snooping for security
+! 9. Implement DAI and IP source guard
+! 10. Regular backup of configurations
+! 11. Use SSH instead of Telnet
+! 12. Enable logging for troubleshooting
+! 13. Implement storm control
+! 14. Document all changes
+! 15. Use strong passwords
+
+! ========================================
+! RECOVERY PROCEDURES
+! ========================================
+
+! Password recovery (switch reboot required):
+! 1. Power off switch
+! 2. Hold MODE button while powering on
+! 3. Release when LED turns amber
+! 4. flash_init
+! 5. load_helper
+! 6. dir flash:
+! 7. rename flash:config.text flash:config.old
+! 8. boot
+! 9. After boot: rename flash:config.old flash:config.text
+! 10. copy flash:config.text system:running-config
+! 11. Change passwords and save
+
+! Factory reset:
+! write erase
+! reload

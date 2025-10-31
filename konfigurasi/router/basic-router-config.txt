@@ -1,0 +1,281 @@
+! Basic Router Configuration Template
+! Cisco IOS Router
+
+! ========================================
+! INITIAL SETUP
+! ========================================
+
+enable
+configure terminal
+
+! Set hostname
+hostname Router-Core
+
+! Enable password encryption
+service password-encryption
+
+! Set enable secret password
+enable secret cisco123
+
+! Configure console password
+line console 0
+ password console123
+ login
+ logging synchronous
+ exec-timeout 5 0
+ exit
+
+! Configure vty (telnet/ssh) access
+line vty 0 4
+ password vty123
+ login
+ transport input ssh
+ exec-timeout 5 0
+ exit
+
+! ========================================
+! INTERFACE CONFIGURATION
+! ========================================
+
+! LAN Interface - GigabitEthernet 0/0
+interface GigabitEthernet 0/0
+ description LAN Interface to Internal Network
+ ip address 192.168.1.1 255.255.255.0
+ no shutdown
+ exit
+
+! WAN Interface - GigabitEthernet 0/1
+interface GigabitEthernet 0/1
+ description WAN Interface to Internet/ISP
+ ip address 10.0.0.1 255.255.255.252
+ no shutdown
+ exit
+
+! Optional: Serial Interface
+interface Serial 0/0/0
+ description WAN Link to Remote Site
+ ip address 172.16.0.1 255.255.255.252
+ clock rate 64000
+ bandwidth 64
+ no shutdown
+ exit
+
+! ========================================
+! STATIC ROUTING
+! ========================================
+
+! Static route to remote network
+ip route 192.168.2.0 255.255.255.0 172.16.0.2
+
+! Default route to ISP
+ip route 0.0.0.0 0.0.0.0 10.0.0.2
+
+! ========================================
+! DHCP CONFIGURATION
+! ========================================
+
+! Exclude addresses from DHCP pool
+ip dhcp excluded-address 192.168.1.1 192.168.1.10
+
+! Create DHCP pool
+ip dhcp pool LAN-POOL
+ network 192.168.1.0 255.255.255.0
+ default-router 192.168.1.1
+ dns-server 8.8.8.8 8.8.4.4
+ domain-name example.com
+ lease 7
+ exit
+
+! ========================================
+! NAT CONFIGURATION (PAT)
+! ========================================
+
+! Define inside network with ACL
+access-list 1 permit 192.168.1.0 0.0.0.255
+
+! Configure NAT with overload (PAT)
+ip nat inside source list 1 interface GigabitEthernet 0/1 overload
+
+! Apply NAT to interfaces
+interface GigabitEthernet 0/0
+ ip nat inside
+ exit
+
+interface GigabitEthernet 0/1
+ ip nat outside
+ exit
+
+! ========================================
+! ACCESS CONTROL LIST (ACL)
+! ========================================
+
+! Standard ACL - Block specific network
+access-list 10 deny 192.168.100.0 0.0.0.255
+access-list 10 permit any
+
+! Extended ACL - Control specific traffic
+access-list 100 deny tcp any host 192.168.1.10 eq 80
+access-list 100 deny tcp any host 192.168.1.10 eq 443
+access-list 100 permit ip any any
+
+! Named ACL example
+ip access-list extended INTERNET-FILTER
+ deny tcp any any eq 23
+ deny tcp any any eq ftp
+ permit tcp any any eq 80
+ permit tcp any any eq 443
+ permit tcp any any eq 53
+ permit udp any any eq 53
+ permit icmp any any echo
+ permit icmp any any echo-reply
+ deny ip any any log
+ exit
+
+! Apply ACL to interface
+interface GigabitEthernet 0/0
+ ip access-group 100 in
+ exit
+
+! ========================================
+! SSH CONFIGURATION
+! ========================================
+
+! Generate RSA key for SSH
+crypto key generate rsa general-keys modulus 2048
+
+! Enable SSH version 2
+ip ssh version 2
+ip ssh time-out 60
+ip ssh authentication-retries 3
+
+! Create local username
+username admin privilege 15 secret admin123
+
+! Configure vty for SSH only with local authentication
+line vty 0 4
+ login local
+ transport input ssh
+ exit
+
+! ========================================
+! DNS AND DOMAIN
+! ========================================
+
+! Configure domain name
+ip domain-name example.com
+
+! Configure DNS server
+ip name-server 8.8.8.8
+ip name-server 8.8.4.4
+
+! ========================================
+! LOGGING AND MONITORING
+! ========================================
+
+! Enable logging
+logging buffered 51200 debugging
+logging console warnings
+logging trap informational
+
+! Configure syslog server (optional)
+! logging host 192.168.1.100
+
+! Enable timestamps
+service timestamps debug datetime msec
+service timestamps log datetime msec
+
+! ========================================
+! NTP CONFIGURATION
+! ========================================
+
+! Configure NTP server
+ntp server 0.id.pool.ntp.org
+ntp server 1.id.pool.ntp.org
+
+! Set timezone
+clock timezone WIB 7
+
+! ========================================
+! SNMP CONFIGURATION (Optional)
+! ========================================
+
+! SNMP community strings
+snmp-server community public RO
+snmp-server community private RW
+
+! SNMP location and contact
+snmp-server location "Server Room - Building A"
+snmp-server contact "admin@example.com"
+
+! ========================================
+! BANNER
+! ========================================
+
+banner motd ^
+**********************************************
+*                                            *
+*     AUTHORIZED ACCESS ONLY                 *
+*     Unauthorized access prohibited         *
+*     All activities are monitored           *
+*                                            *
+**********************************************
+^
+
+! ========================================
+! SAVE CONFIGURATION
+! ========================================
+
+end
+
+! Save running configuration to startup configuration
+write memory
+! or
+copy running-config startup-config
+
+! ========================================
+! VERIFICATION COMMANDS
+! ========================================
+
+! show running-config
+! show startup-config
+! show ip interface brief
+! show ip route
+! show ip nat translations
+! show ip nat statistics
+! show access-lists
+! show ip dhcp binding
+! show ip dhcp pool
+! show version
+! show interfaces
+! show processes cpu
+! show memory
+
+! ========================================
+! BACKUP CONFIGURATION
+! ========================================
+
+! Backup to TFTP server
+! copy running-config tftp://192.168.1.100/router-backup.cfg
+
+! Restore from TFTP server
+! copy tftp://192.168.1.100/router-backup.cfg running-config
+
+! ========================================
+! NOTES
+! ========================================
+
+! This is a basic router configuration template.
+! Adjust IP addresses, passwords, and other settings
+! according to your network requirements.
+!
+! Security recommendations:
+! 1. Change default passwords
+! 2. Use strong passwords (min 8 characters)
+! 3. Disable unused interfaces
+! 4. Implement ACLs
+! 5. Enable logging
+! 6. Regular backup configurations
+! 7. Keep IOS updated
+! 8. Use SSH instead of Telnet
+! 9. Implement AAA for authentication
+! 10. Monitor logs regularly

@@ -1,0 +1,68 @@
+# Network Test Logs
+*.log
+connectivity-test-*.log
+network-report-*.txt
+
+# Packet Captures
+*.pcap
+*.pcapng
+*.cap
+
+# Backup Files
+*.bak
+*.backup
+*~
+*.swp
+*.swo
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary Files
+tmp/
+temp/
+*.tmp
+
+# Editor Files
+.vscode/
+.idea/
+*.sublime-*
+
+# Certificate and Key Files (Security)
+*.key
+*.pem
+*.crt
+*.cer
+*.p12
+*.pfx
+
+# Configuration Backups
+*-backup-*
+*.old
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Documentation Build
+_build/
+docs/_build/
+
+# Credentials (NEVER commit)
+credentials.txt
+passwords.txt
+secrets.txt
+.env
