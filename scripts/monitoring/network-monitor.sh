@@ -23,9 +23,10 @@ clear_screen() {
 
 # Function to print header
 print_header() {
+    local datetime=$(date '+%Y-%m-%d %H:%M:%S')
     echo -e "${GREEN}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}║           Network Monitoring Dashboard                        ║${NC}"
-    echo -e "${GREEN}║           $(date '+%Y-%m-%d %H:%M:%S')                                  ║${NC}"
+    printf "${GREEN}║           %-51s║${NC}\n" "$datetime"
     echo -e "${GREEN}╚════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }
@@ -54,8 +55,12 @@ show_bandwidth() {
     else
         echo "vnstat not installed. Install with: sudo apt-get install vnstat"
         echo ""
-        echo "Current RX/TX bytes:"
-        cat /proc/net/dev | grep -v "lo:" | grep ":" | awk '{print $1, "RX:", $2, "bytes, TX:", $10, "bytes"}'
+        echo "Current network statistics:"
+        if command -v ip &> /dev/null; then
+            ip -s link show | grep -E "^[0-9]|RX:|TX:"
+        else
+            cat /proc/net/dev | grep -v "lo:" | grep ":" | awk '{print $1, "RX:", $2, "bytes, TX:", $10, "bytes"}'
+        fi
     fi
     
     echo ""

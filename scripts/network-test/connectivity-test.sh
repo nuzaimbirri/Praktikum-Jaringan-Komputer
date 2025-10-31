@@ -68,14 +68,20 @@ test_dns() {
     
     echo -e "\n${YELLOW}Testing DNS resolution for $domain...${NC}"
     
-    if nslookup "$domain" > /dev/null 2>&1; then
+    if command -v dig &> /dev/null; then
+        local ip=$(dig +short "$domain" | head -n1)
+        if [ -n "$ip" ]; then
+            print_status "OK" "DNS resolution for $domain successful (IP: $ip)"
+            return 0
+        fi
+    elif nslookup "$domain" > /dev/null 2>&1; then
         local ip=$(nslookup "$domain" | grep -A1 "Name:" | grep "Address:" | awk '{print $2}')
         print_status "OK" "DNS resolution for $domain successful (IP: $ip)"
         return 0
-    else
-        print_status "FAIL" "DNS resolution for $domain failed"
-        return 1
     fi
+    
+    print_status "FAIL" "DNS resolution for $domain failed"
+    return 1
 }
 
 # Function to get network info
